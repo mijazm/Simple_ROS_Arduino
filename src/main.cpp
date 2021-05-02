@@ -25,6 +25,12 @@ References:
 #include <std_msgs/String.h>
 
 //Define Motor Pins [left_forward, left_backward, right_forward, right_backward]
+std_msgs::Float32 lwheelVelocityMsg;
+ros::Publisher lwheelVelocityPub("lwheel_velocity", &lwheelVelocityMsg);
+
+std_msgs::Float32 rwheelVelocityMsg;
+ros::Publisher rwheelVelocityPub("rwheel_velocity", &rwheelVelocityMsg);
+
 Rover rover(4,5,6,7);
 
 //Defining Encoder Pins
@@ -40,18 +46,12 @@ const int MR_B = 19;
 //Creating a Nodehandle object
 ros::NodeHandle nh;
 
-//Position and Velocity Publisher Messages
+//Position Publisher Messages
 std_msgs::Int16 lwheelMsg;
 ros::Publisher lwheelPub("lwheel", &lwheelMsg);
 
 std_msgs::Int16 rwheelMsg;
 ros::Publisher rwheelPub("rwheel", &rwheelMsg);
-
-std_msgs::Float32 lwheelVelocityMsg;
-ros::Publisher lwheelVelocityPub("lwheel_velocity", &lwheelVelocityMsg);
-
-std_msgs::Float32 rwheelVelocityMsg;
-ros::Publisher rwheelVelocityPub("rwheel_velocity", &rwheelVelocityMsg);
 
 
 
@@ -76,26 +76,13 @@ volatile long rwheel = 0;
 long lastLwheel = 0;
 long lastRwheel = 0;
 
-// This value is different for every robot, you will have to experimentally determine this.
-// It is the number of ticks it takes to drive the robot one meter in a straight line.
-int ticksPerMeter=28028;
-
-unsigned long lastLoopTime;
 
 // These are ISRs for reading the encoder ticks
 void leftAChange() {
   if (digitalRead(ML_A) == digitalRead(ML_B)) {
-    ++lwheel;
-  } else {
     --lwheel;
-  }
-}
-
-void leftBChange() {
-  if (digitalRead(ML_A) != digitalRead(ML_B)) {
-    ++lwheel;
   } else {
-    --lwheel;
+    ++lwheel;
   }
 }
 
@@ -107,49 +94,31 @@ void rightAChange() {
   }
 }
 
-void rightBChange() {
-  if (digitalRead(MR_A) == digitalRead(MR_B)) {
-    ++rwheel;
-  } else {
-    --rwheel;
-  }
-}
-
 void setup() {
   
    //begin serial communication
   Serial1.begin(115200);
   
-  pinMode(ML_A,INPUT_PULLUP);
-  pinMode(ML_B,INPUT_PULLUP);
-  pinMode(MR_A,INPUT_PULLUP);
-  pinMode(MR_B,INPUT_PULLUP);
+  pinMode(ML_A,INPUT);
+  pinMode(ML_B,INPUT);
+  pinMode(MR_A,INPUT);
+  pinMode(MR_B,INPUT);
   
   //Interrupts are the best way to read encoder values
   attachInterrupt(digitalPinToInterrupt(ML_A), leftAChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(ML_B), leftBChange, CHANGE);
   attachInterrupt(digitalPinToInterrupt(MR_A), rightAChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(MR_B), rightBChange, CHANGE);
-
   nh.initNode();
   
   nh.subscribe(controlSub);
   
   nh.advertise(lwheelPub);
   nh.advertise(rwheelPub);
-  nh.advertise(lwheelVelocityPub);
-  nh.advertise(rwheelVelocityPub);
-  
-  lastLoopTime = micros();
   
 }
 
 void loop() {
   
-  delay(66);
-
-  long curLoopTime = micros();
-  
+  delay(60);
   
   noInterrupts();
   long curLwheel = lwheel;
@@ -161,20 +130,8 @@ void loop() {
   lwheelPub.publish(&lwheelMsg);
   rwheelPub.publish(&rwheelMsg);
 
-  float dt = (curLoopTime - lastLoopTime) / 1E6;
-
-  float lwheelRate = ((curLwheel - lastLwheel) / dt);
-  float rwheelRate = ((curRwheel - lastRwheel) / dt);
-
-  lwheelVelocityMsg.data = lwheelRate / ticksPerMeter;
-  rwheelVelocityMsg.data = rwheelRate / ticksPerMeter;
-  lwheelVelocityPub.publish(&lwheelVelocityMsg);
-  rwheelVelocityPub.publish(&rwheelVelocityMsg);
-  
   lastLwheel = curLwheel;
   lastRwheel = curRwheel;
-  
-  lastLoopTime = curLoopTime;
   
   nh.spinOnce();
   
