@@ -1,3 +1,17 @@
+/*** 
+ This code makes an Arduino Mega 2560 board act as a ROS Node. 
+For a simple diff drive robot it can publish the speed and positon
+of left and right motor wheels, and subscribe to a control topic 
+to accept control commands from a computer / Raspberry Pi running ROS.
+
+Author: Mijaz Mukundan
+
+References:
+1. https://github.com/merose/ROSRobotControl
+2. https://maker.pro/arduino/tutorial/how-to-use-arduino-with-robot-operating-system-ros
+3. https://dronebotworkshop.com/rotary-encoders-arduino/
+
+**/
 #include <Arduino.h>
 #include <rover.h>
 
@@ -10,15 +24,18 @@
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
 
-//Define Motor Pins
+//Define Motor Pins [left_forward, left_backward, right_forward, right_backward]
 Rover rover(4,5,6,7);
 
 //Defining Encoder Pins
-// Pins for the A-Star motor encoder outputs.
-const int M1_A = 2;
-const int M1_B = 3;
-const int M2_A = 18;
-const int M2_B = 19;
+// Pins for the SPG30E-200K DC Geared Motor with Encoder.
+// Left Motor Encoder
+const int ML_A = 2;
+const int ML_B = 3;
+
+//Right Motor Encoder
+const int MR_A = 18;
+const int MR_B = 19;
 
 //Creating a Nodehandle object
 ros::NodeHandle nh;
@@ -38,7 +55,7 @@ ros::Publisher rwheelVelocityPub("rwheel_velocity", &rwheelVelocityMsg);
 
 
 
-
+//callback function when a control message is received
 void rover_control(const std_msgs::String& ctrl_msg)
 { 
   
@@ -48,21 +65,26 @@ void rover_control(const std_msgs::String& ctrl_msg)
   else if (ctrl_msg.data[0]=='s') rover.backward();
   else rover.stop();
 }
-ros::Subscriber<std_msgs::String> sub("rover_control", rover_control );
 
+// Subscribing to "rover_control" ROS master serves the commands though this topic 
+ros::Subscriber<std_msgs::String> controlSub("rover_control", rover_control );
 
+// It is best to use volatile variables for the updates in interrupt service routines
 volatile long lwheel = 0;
 volatile long rwheel = 0;
 
 long lastLwheel = 0;
 long lastRwheel = 0;
 
-int ticksPerMeter=2727;
+// This value is different for every robot, you will have to experimentally determine this.
+// It is the number of ticks it takes to drive the robot one meter in a straight line.
+int ticksPerMeter=28028;
 
 unsigned long lastLoopTime;
 
+// These are ISRs for reading the encoder ticks
 void leftAChange() {
-  if (digitalRead(M1_A) == digitalRead(M1_B)) {
+  if (digitalRead(ML_A) == digitalRead(ML_B)) {
     ++lwheel;
   } else {
     --lwheel;
@@ -70,7 +92,7 @@ void leftAChange() {
 }
 
 void leftBChange() {
-  if (digitalRead(M1_A) != digitalRead(M1_B)) {
+  if (digitalRead(ML_A) != digitalRead(ML_B)) {
     ++lwheel;
   } else {
     --lwheel;
@@ -78,7 +100,7 @@ void leftBChange() {
 }
 
 void rightAChange() {
-  if (digitalRead(M2_A) != digitalRead(M2_B)) {
+  if (digitalRead(MR_A) != digitalRead(MR_B)) {
     ++rwheel;
   } else {
     --rwheel;
@@ -86,7 +108,7 @@ void rightAChange() {
 }
 
 void rightBChange() {
-  if (digitalRead(M2_A) == digitalRead(M2_B)) {
+  if (digitalRead(MR_A) == digitalRead(MR_B)) {
     ++rwheel;
   } else {
     --rwheel;
@@ -97,20 +119,21 @@ void setup() {
   
    //begin serial communication
   Serial1.begin(115200);
-
-  pinMode(M1_A,INPUT_PULLUP);
-  pinMode(M1_B,INPUT_PULLUP);
-  pinMode(M2_A,INPUT_PULLUP);
-  pinMode(M2_B,INPUT_PULLUP);
-
-  attachInterrupt(digitalPinToInterrupt(M1_A), leftAChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(M1_B), leftBChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(M2_A), rightAChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(M2_B), rightBChange, CHANGE);
+  
+  pinMode(ML_A,INPUT_PULLUP);
+  pinMode(ML_B,INPUT_PULLUP);
+  pinMode(MR_A,INPUT_PULLUP);
+  pinMode(MR_B,INPUT_PULLUP);
+  
+  //Interrupts are the best way to read encoder values
+  attachInterrupt(digitalPinToInterrupt(ML_A), leftAChange, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ML_B), leftBChange, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(MR_A), rightAChange, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(MR_B), rightBChange, CHANGE);
 
   nh.initNode();
   
-  nh.subscribe(sub);
+  nh.subscribe(controlSub);
   
   nh.advertise(lwheelPub);
   nh.advertise(rwheelPub);
@@ -126,6 +149,7 @@ void loop() {
   delay(66);
 
   long curLoopTime = micros();
+  
   
   noInterrupts();
   long curLwheel = lwheel;
