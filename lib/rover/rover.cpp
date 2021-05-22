@@ -7,7 +7,7 @@ MIT Lisence
 #include<Arduino.h>
 #include "rover.h"
 
-Rover::Rover(int motor_left_forward, int motor_left_backward, int motor_right_forward, int motor_right_backward){
+Rover::Rover(int motor_right_forward, int motor_right_backward, int motor_left_forward, int motor_left_backward){
     pinMode(motor_left_forward,OUTPUT);
     pinMode(motor_left_backward,OUTPUT);
     pinMode(motor_right_backward,OUTPUT);
