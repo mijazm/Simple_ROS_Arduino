@@ -66,16 +66,10 @@ ros::Subscriber<std_msgs::String> controlSub("rover_control", rover_control );
 volatile long lwheel = 0;
 volatile long rwheel = 0;
 
-long lastLwheel = 0;
-long lastRwheel = 0;
-
-// This value is different for every robot, you will have to experimentally determine this.
-// It is the number of ticks it takes to drive the robot one meter in a straight line.
-int ticksPerMeter=28028;
-
 unsigned long lastLoopTime;
 
 // These are ISRs for reading the encoder ticks
+// For the left wheel an anticlockwise rotation should increment the ticks
 void leftAChange() {
   if (digitalRead(ML_A) == digitalRead(ML_B)) {
     ++lwheel;
@@ -84,6 +78,7 @@ void leftAChange() {
   }
 }
 
+// For the right wheel a clockwise rotation should increment the ticks
 void rightAChange() {
   if (digitalRead(MR_A) != digitalRead(MR_B)) {
     ++rwheel;
@@ -128,7 +123,6 @@ void loop() {
   long curLoopTime = millis();
 
    //This means that the Left and Right wheel encoder ticks is published every 100ms
-  
   if (curLoopTime-lastLoopTime > 100){
 
 
