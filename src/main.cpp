@@ -24,9 +24,10 @@ References:
 #include <std_msgs/Float32.h>
 #include <std_msgs/String.h>
 
-//Define Motor Pins [left_forward, left_backward, right_forward, right_backward]
+//Define Motor Pins [IN1, IN2, IN3, IN4]
 Rover rover(4,5,6,7);
-
+uint8_t EN1 = 8;
+uint8_t EN2 = 9;
 //Defining Encoder Pins
 // Pins for the SPG30E-200K DC Geared Motor with Encoder.
 // Left Motor Encoder
@@ -40,20 +41,12 @@ const int MR_B = 19;
 //Creating a Nodehandle object
 ros::NodeHandle nh;
 
-//Position and Velocity Publisher Messages
+//Position Publisher Messages
 std_msgs::Int16 lwheelMsg;
 ros::Publisher lwheelPub("lwheel", &lwheelMsg);
 
 std_msgs::Int16 rwheelMsg;
 ros::Publisher rwheelPub("rwheel", &rwheelMsg);
-
-std_msgs::Float32 lwheelVelocityMsg;
-ros::Publisher lwheelVelocityPub("lwheel_velocity", &lwheelVelocityMsg);
-
-std_msgs::Float32 rwheelVelocityMsg;
-ros::Publisher rwheelVelocityPub("rwheel_velocity", &rwheelVelocityMsg);
-
-
 
 //callback function when a control message is received
 void rover_control(const std_msgs::String& ctrl_msg)
@@ -91,14 +84,6 @@ void leftAChange() {
   }
 }
 
-void leftBChange() {
-  if (digitalRead(ML_A) != digitalRead(ML_B)) {
-    ++lwheel;
-  } else {
-    --lwheel;
-  }
-}
-
 void rightAChange() {
   if (digitalRead(MR_A) != digitalRead(MR_B)) {
     ++rwheel;
@@ -107,18 +92,15 @@ void rightAChange() {
   }
 }
 
-void rightBChange() {
-  if (digitalRead(MR_A) == digitalRead(MR_B)) {
-    ++rwheel;
-  } else {
-    --rwheel;
-  }
-}
-
 void setup() {
   
-   //begin serial communication
-  Serial1.begin(115200);
+  pinMode(EN1,OUTPUT);
+  pinMode(EN2,OUTPUT);
+  
+  //Keeping enable pins high for full speed
+  digitalWrite(EN1,HIGH);
+  digitalWrite(EN2,HIGH);
+
   
   pinMode(ML_A,INPUT_PULLUP);
   pinMode(ML_B,INPUT_PULLUP);
@@ -126,10 +108,9 @@ void setup() {
   pinMode(MR_B,INPUT_PULLUP);
   
   //Interrupts are the best way to read encoder values
-  attachInterrupt(digitalPinToInterrupt(ML_A), leftAChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(ML_B), leftBChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(MR_A), rightAChange, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(MR_B), rightBChange, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ML_A), leftAChange, RISING);
+  attachInterrupt(digitalPinToInterrupt(MR_A), rightAChange, RISING);
+
 
   nh.initNode();
   
@@ -137,44 +118,27 @@ void setup() {
   
   nh.advertise(lwheelPub);
   nh.advertise(rwheelPub);
-  nh.advertise(lwheelVelocityPub);
-  nh.advertise(rwheelVelocityPub);
   
-  lastLoopTime = micros();
+  lastLoopTime = millis();
   
 }
 
 void loop() {
   
-  delay(66);
+  long curLoopTime = millis();
 
-  long curLoopTime = micros();
+   //This means that the Left and Right wheel encoder ticks is published every 100ms
   
-  
-  noInterrupts();
-  long curLwheel = lwheel;
-  long curRwheel = rwheel;
-  interrupts();
+  if (curLoopTime-lastLoopTime > 100){
 
-  lwheelMsg.data = (int) curLwheel;
-  rwheelMsg.data = (int) curRwheel;
-  lwheelPub.publish(&lwheelMsg);
-  rwheelPub.publish(&rwheelMsg);
 
-  float dt = (curLoopTime - lastLoopTime) / 1E6;
+    lwheelMsg.data = (int) lwheel;
+    rwheelMsg.data = (int) rwheel;
+    lwheelPub.publish(&lwheelMsg);
+    rwheelPub.publish(&rwheelMsg);
 
-  float lwheelRate = ((curLwheel - lastLwheel) / dt);
-  float rwheelRate = ((curRwheel - lastRwheel) / dt);
-
-  lwheelVelocityMsg.data = lwheelRate / ticksPerMeter;
-  rwheelVelocityMsg.data = rwheelRate / ticksPerMeter;
-  lwheelVelocityPub.publish(&lwheelVelocityMsg);
-  rwheelVelocityPub.publish(&rwheelVelocityMsg);
-  
-  lastLwheel = curLwheel;
-  lastRwheel = curRwheel;
-  
-  lastLoopTime = curLoopTime;
+    lastLoopTime = curLoopTime;
+  }
   
   nh.spinOnce();
   
