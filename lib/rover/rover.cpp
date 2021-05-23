@@ -7,56 +7,57 @@ MIT Lisence
 #include<Arduino.h>
 #include "rover.h"
 
-Rover::Rover(int motor_right_forward, int motor_right_backward, int motor_left_forward, int motor_left_backward){
-    pinMode(motor_left_forward,OUTPUT);
-    pinMode(motor_left_backward,OUTPUT);
-    pinMode(motor_right_backward,OUTPUT);
-    pinMode(motor_right_forward,OUTPUT);
+Rover::Rover(int in1, int in2, int in3, int in4){
+    pinMode(in1,OUTPUT);
+    pinMode(in2,OUTPUT);
+    pinMode(in3,OUTPUT);
+    pinMode(in4,OUTPUT);
 
-    _motor_left_backward=motor_left_backward;
-    _motor_left_forward=motor_left_forward;
-    _motor_right_backward=motor_right_backward;
-    _motor_right_forward=motor_right_forward;
+    _in1 = in1;
+    _in2 = in2;
+    _in3 = in3;
+    _in4 = in4;
 }
 
 void Rover::stop(){
-    digitalWrite(_motor_left_forward,LOW);
-    digitalWrite(_motor_right_forward,LOW);
+    digitalWrite(_in1,LOW);
+    digitalWrite(_in2,LOW);
 
-    digitalWrite(_motor_left_backward,LOW);
-    digitalWrite(_motor_right_backward,LOW);
+    digitalWrite(_in3,LOW);
+    digitalWrite(_in4,LOW);
 }
 
 void Rover::forward(){
-    digitalWrite(_motor_left_forward,HIGH);
-    digitalWrite(_motor_right_forward,HIGH);
+    
+    digitalWrite(_in1,HIGH);
+    digitalWrite(_in2,LOW);
 
-    digitalWrite(_motor_left_backward,LOW);
-    digitalWrite(_motor_right_backward,LOW);
+    digitalWrite(_in3,HIGH);
+    digitalWrite(_in4,LOW);
 }
 
 void Rover::backward(){
-    digitalWrite(_motor_left_forward,LOW);
-    digitalWrite(_motor_right_forward,LOW);
+    digitalWrite(_in1,LOW);
+    digitalWrite(_in2,HIGH);
 
-    digitalWrite(_motor_left_backward,HIGH);
-    digitalWrite(_motor_right_backward,HIGH);
+    digitalWrite(_in3,LOW);
+    digitalWrite(_in4,HIGH);
 }
 
 void Rover::turn_left(){
-    digitalWrite(_motor_left_forward,LOW);
-    digitalWrite(_motor_right_forward,HIGH);
+    digitalWrite(_in1,HIGH);
+    digitalWrite(_in2,LOW);
 
-    digitalWrite(_motor_left_backward,HIGH);
-    digitalWrite(_motor_right_backward,LOW);
+    digitalWrite(_in3,LOW);
+    digitalWrite(_in4,HIGH);
 }
 
 void Rover::turn_right(){
-    digitalWrite(_motor_left_forward,HIGH);
-    digitalWrite(_motor_right_forward,LOW);
+    digitalWrite(_in1,LOW);
+    digitalWrite(_in2,HIGH);
 
-    digitalWrite(_motor_left_backward,LOW);
-    digitalWrite(_motor_right_backward,HIGH);
+    digitalWrite(_in3,HIGH);
+    digitalWrite(_in4,LOW);
 }
 
 //###########################################################################################################################

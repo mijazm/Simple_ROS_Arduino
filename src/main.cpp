@@ -25,9 +25,12 @@ References:
 #include <std_msgs/String.h>
 
 //Define Motor Pins [IN1, IN2, IN3, IN4]
+//OUT1 and OUT2 are connected to the right and OUT3 and OUT4 connected 
+// to the left motor respectively
 Rover rover(4,5,6,7);
 uint8_t EN1 = 8;
 uint8_t EN2 = 9;
+
 //Defining Encoder Pins
 // Pins for the SPG30E-200K DC Geared Motor with Encoder.
 // Left Motor Encoder
@@ -71,7 +74,7 @@ unsigned long lastLoopTime;
 // These are ISRs for reading the encoder ticks
 // For the left wheel an anticlockwise rotation should increment the ticks
 void leftAChange() {
-  if (digitalRead(ML_A) == digitalRead(ML_B)) {
+  if (digitalRead(ML_A) != digitalRead(ML_B)) {
     ++lwheel;
   } else {
     --lwheel;
@@ -80,7 +83,7 @@ void leftAChange() {
 
 // For the right wheel a clockwise rotation should increment the ticks
 void rightAChange() {
-  if (digitalRead(MR_A) != digitalRead(MR_B)) {
+  if (digitalRead(MR_A) == digitalRead(MR_B)) {
     ++rwheel;
   } else {
     --rwheel;

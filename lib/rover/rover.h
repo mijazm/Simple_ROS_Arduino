@@ -11,14 +11,14 @@ MIT License
 class Rover
 {
     public:
-        Rover(int motor_right_forward, int motor_right_backward, int motor_left_forward, int motor_left_backward);
+        Rover(int in1, int in2, int in3, int in4);
         void forward();
         void backward();
         void turn_left();
         void turn_right();
         void stop();
     private:
-        int _motor_left_forward, _motor_left_backward, _motor_right_forward, _motor_right_backward;
+        int _in1, _in2, _in3, _in4;
 
 };
 
